@@ -1,0 +1,13 @@
+SELECT     Crews.code AS ProviderCode, Crews.name AS ProviderName, T.g2pcrid AS PCR_ID, T.calldate, T.tdate, T.job
+FROM         (SELECT     dbo.FDC_Shifts.shiftno, dbo.Drivers.code, dbo.Drivers.name
+                       FROM          dbo.FDC_Shifts INNER JOIN
+                                              dbo.Drivers ON dbo.FDC_Shifts.crew1code = dbo.Drivers.code
+                       UNION
+                       SELECT     FDC_Shifts_2.shiftno, Drivers_2.code, Drivers_2.name
+                       FROM         dbo.FDC_Shifts AS FDC_Shifts_2 INNER JOIN
+                                             dbo.Drivers AS Drivers_2 ON FDC_Shifts_2.crew2code = Drivers_2.code
+                       UNION
+                       SELECT     FDC_Shifts_1.shiftno, Drivers_1.code, Drivers_1.name
+                       FROM         dbo.FDC_Shifts AS FDC_Shifts_1 INNER JOIN
+                                             dbo.Drivers AS Drivers_1 ON FDC_Shifts_1.crew3code = Drivers_1.code) AS Crews INNER JOIN
+                      dbo.FDC_Trips AS T ON Crews.shiftno = T.shiftno

@@ -1,0 +1,51 @@
+SELECT AtHospElapsed, HospTrans, HospitalName FROM 
+(
+	SELECT TOP 5
+		AVG(DATEDIFF("n"
+		,cad.AssignmentFireLog.AtHospitalTime, cad.AssignmentFireLog.AvailableTime)) AS AtHospElapsed
+		,COUNT(DISTINCT cad.Assignment.AssignmentID) AS HospTrans
+		,adm.Hospital.Description AS HospitalName
+	FROM
+		cad.AssignmentFireLog
+		INNER JOIN adm.Hospital
+			ON cad.AssignmentFireLog.HospitalID = adm.Hospital.HospitalID
+		INNER JOIN cad.Assignment
+			ON cad.AssignmentFireLog.AssignmentID = cad.Assignment.AssignmentID
+		INNER JOIN cad.Roster
+			ON cad.Assignment.RosterID = cad.Roster.RosterID
+	WHERE cad.Assignment.CreatedDate <= DATEADD(dd, -datepart(dw, GetDate()), cast(GetDate() as date))
+	AND cad.Assignment.CreatedDate >= DATEADD(dd, -(datepart(dw, GetDate())+6), cast(GetDate() as date))
+	AND cad.Roster.AgencyID = 3
+	GROUP BY adm.Hospital.Description
+	ORDER BY COUNT(DISTINCT cad.Assignment.AssignmentID) desc
+) AS A1
+
+UNION ALL
+
+SELECT AVG(DATEDIFF("n"
+		,cad.AssignmentFireLog.AtHospitalTime, cad.AssignmentFireLog.AvailableTime)) AS AtHospElapsed
+		,Count(DISTINCT cad.Assignment.AssignmentID) as HospTrans
+		,'Other' as HospitalName
+FROM
+		cad.AssignmentFireLog
+		INNER JOIN adm.Hospital
+			ON cad.AssignmentFireLog.HospitalID = adm.Hospital.HospitalID
+		INNER JOIN cad.Assignment
+			ON cad.AssignmentFireLog.AssignmentID = cad.Assignment.AssignmentID
+		INNER JOIN cad.Roster
+			ON cad.Assignment.RosterID = cad.Roster.RosterID
+	WHERE cad.Assignment.CreatedDate <= DATEADD(dd, -datepart(dw, GetDate()), cast(GetDate() as date))
+	AND cad.Assignment.CreatedDate >= DATEADD(dd, -(datepart(dw, GetDate())+6), cast(GetDate() as date))
+	AND cad.Roster.AgencyID = 3
+	AND cad.AssignmentFireLog.HospitalID NOT IN 
+	(SELECT TOP 5 FL.HospitalID
+	 FROM cad.AssignmentFireLog FL 
+	 	INNER JOIN cad.Assignment CA ON FL.AssignmentID = CA.AssignmentID
+	 	INNER JOIN cad.Roster R
+			ON CA.RosterID = R.RosterID
+	 WHERE CA.CreatedDate <= DATEADD(dd, -datepart(dw, GetDate()), cast(GetDate() as date))
+	 AND CA.CreatedDate >= DATEADD(dd, -(datepart(dw, GetDate())+6), cast(GetDate() as date))
+	 AND cad.Roster.AgencyID = 3
+  	 AND FL.HospitalID <> ''
+	 GROUP BY FL.HospitalID
+	 ORDER BY COUNT(DISTINCT CA.AssignmentID) desc)
